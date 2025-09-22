@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% block title %}Lista de Membros{% endblock %}
+{% block content %}
+<h2 class="mb-4">Lista de Membros</h2>
+<div class="mb-3">
+    <input type="text" id="searchInput" class="form-control" placeholder="Filtrar por nome do membro...">
+</div>
+<table class="table table-striped table-hover">
+    <thead class="table-primary">
+        <tr>
+            <th>Apelido</th>
+            <th>ID do Discord</th>
+            <th>Status</th>
+            <th>Forma de Pagamento</th>
+            <th>Pago em</th>
+            <th>Expira em</th>
+            <th>Cadastrado em</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for member in members %}
+        {% now "U" as now_utc %}
+        {% with expired=member.expired_in|date:'U'|add:'-0' now=now_utc|add:'-0' %}
+        <tr
+              data-nome="{{ member.nickname|lower }}"
+            class="
+            {% if member.status == 'inactive' %}table-secondary
+            {% elif member.status == 'active' and member.expired_in and expired < now %}table-danger
+            {% elif member.status == 'active' and member.expired_in and expired > now and expired <= now|add:'172800' %}table-warning
+            {% endif %}">
+        {% endwith %}
+            <td>{{ member.nickname }}</td>
+            <td>{{ member.discord_id }}</td>
+            <td>
+                {% if member.status == 'active' %}Ativo{% elif member.status == 'inactive' %}Inativo{% else %}{{ member.get_status_display }}{% endif %}
+            </td>
+            <td>
+                {% if member.payment_method == 'weekly' %}Semanal{% elif member.payment_method == 'monthly' %}Mensal{% else %}{{ member.get_payment_method_display }}{% endif %}
+            </td>
+            <td>{% if member.paid_at %}{{ member.paid_at|date:'d/m/Y' }}{% else %}-{% endif %}</td>
+            <td>{% if member.expired_in %}{{ member.expired_in|date:'d/m/Y' }}{% else %}-{% endif %}</td>
+            <td>{{ member.created_at|date:'d/m/Y H:i' }}</td>
+            <td>
+                <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#payModal" data-member-id="{{ member.id }}" data-member-nickname="{{ member.nickname }}">
+                    {% if member.status == 'active' %}Renovar Pagamento{% else %}Marcar como Pago{% endif %}
+                </button>
+            </td>
+    </tr>
+        {% empty %}
+        <tr>
+            <td colspan="6" class="text-center">Nenhum membro cadastrado.</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+</table>
+<script>
+// Filtro de busca instantânea por nome
+document.getElementById('searchInput').addEventListener('keyup', function() {
+    var value = this.value.toLowerCase();
+    var rows = document.querySelectorAll('tbody tr[data-nome]');
+    rows.forEach(function(row) {
+        var nome = row.getAttribute('data-nome');
+        if (nome.includes(value)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+});
+</script>
+
+<!-- Modal de Pagamento -->
+<div class="modal fade" id="payModal" tabindex="-1" aria-labelledby="payModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="payModalLabel">Marcar pagamento para <span id="modalMemberName"></span></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="payForm">
+                    <input type="hidden" name="member_id" id="modalMemberId">
+                    <div class="mb-3">
+                        <label for="payment_method" class="form-label">Forma de Pagamento</label>
+                        <select class="form-select" name="payment_method" id="payment_method" required>
+                            <option value="weekly">Semanal</option>
+                            <option value="monthly">Mensal</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary" form="payForm">Confirmar Pagamento</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+</tbody>
+</table>
+
+<script>
+// Preenche o modal com os dados do membro
+var payModal = document.getElementById('payModal');
+payModal.addEventListener('show.bs.modal', function (event) {
+    var button = event.relatedTarget;
+    var memberId = button.getAttribute('data-member-id');
+    var memberName = button.getAttribute('data-member-nickname');
+    document.getElementById('modalMemberId').value = memberId;
+    document.getElementById('modalMemberName').textContent = memberName;
+});
+
+// Função para obter o CSRF token do cookie
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Envia o formulário de pagamento via AJAX
+document.getElementById('payForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var memberId = document.getElementById('modalMemberId').value;
+    var paymentMethod = document.getElementById('payment_method').value;
+    var csrftoken = getCookie('csrftoken');
+    fetch("{% url 'membros:atualizar_pagamento' %}", {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': csrftoken
+        },
+        body: `member_id=${memberId}&payment_method=${paymentMethod}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Erro ao atualizar pagamento.');
+        }
+    })
+    .catch(() => alert('Erro ao atualizar pagamento.'));
+});
+</script>
+</table>
+{% endblock %}

@@ -1,0 +1,218 @@
+{% extends 'base.html' %}
+{% block title %}Membros Agrupados{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h2 class="mb-0">Membros Ativos Vencidos</h2>
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#msgModal" data-group="ativos_vencidos">Mandar mensagem para todos</button>
+</div>
+<table class="table table-danger table-hover">
+    <thead>
+        <tr>
+            <th>Apelido</th>
+            <th>ID do Discord</th>
+            <th>Forma de Pagamento</th>
+            <th>Pago em</th>
+            <th>Expira em</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for member in ativos_vencidos %}
+        <tr>
+            <td>{{ member.nickname }}</td>
+            <td>{{ member.discord_id }}</td>
+            <td>{% if member.payment_method == 'weekly' %}Semanal{% elif member.payment_method == 'monthly' %}Mensal{% else %}{{ member.get_payment_method_display }}{% endif %}</td>
+            <td>{% if member.paid_at %}{{ member.paid_at|date:'d/m/Y' }}{% else %}-{% endif %}</td>
+            <td>{% if member.expired_in %}{{ member.expired_in|date:'d/m/Y' }}{% else %}-{% endif %}</td>
+            <td>
+                <button class="btn btn-success btn-sm" onclick="renovarMembro('{{ member.id }}', '{{ member.payment_method }}')">Renovar</button>
+                <button class="btn btn-danger btn-sm" onclick="cancelarMembro('{{ member.id }}')">Cancelar</button>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center">Nenhum membro.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Preenche o modal com o grupo correto
+    var msgModal = document.getElementById('msgModal');
+    msgModal.addEventListener('show.bs.modal', function (event) {
+      var button = event.relatedTarget;
+      var group = button.getAttribute('data-group');
+      document.getElementById('modalGroup').value = group;
+    });
+
+    // Envia mensagem em massa via AJAX
+    document.getElementById('msgForm').addEventListener('submit', function(e) {
+        console.log('submit!');
+        e.preventDefault();
+        var group = document.getElementById('modalGroup').value;
+        var mensagem = document.getElementById('mensagem').value;
+        var csrftoken = (document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')||[])[2];
+        console.log('Enviando para grupo:', group, 'Mensagem:', mensagem);
+        fetch("{% url 'membros:enviar_mensagem_grupo' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': csrftoken
+            },
+            body: `group=${group}&mensagem=${encodeURIComponent(mensagem)}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Resposta do backend:', data);
+            if (data.success) {
+                alert('Mensagem enviada para ' + data.enviados.length + ' membros!');
+                document.getElementById('mensagem').value = '';
+                var modal = bootstrap.Modal.getInstance(msgModal);
+                modal.hide();
+            } else {
+                alert('Erro ao enviar mensagem.');
+            }
+        })
+        .catch((err) => { console.log('Erro no fetch:', err); alert('Erro ao enviar mensagem.'); });
+    });
+});
+</script>
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h2 class="mb-0">Membros Ativos a Vencer</h2>
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#msgModal" data-group="ativos_a_vencer">Mandar mensagem para todos</button>
+</div>
+<table class="table table-warning table-hover">
+    <thead>
+        <tr>
+            <th>Apelido</th>
+            <th>ID do Discord</th>
+            <th>Forma de Pagamento</th>
+            <th>Pago em</th>
+            <th>Expira em</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for member in ativos_a_vencer %}
+        <tr>
+            <td>{{ member.nickname }}</td>
+            <td>{{ member.discord_id }}</td>
+            <td>{% if member.payment_method == 'weekly' %}Semanal{% elif member.payment_method == 'monthly' %}Mensal{% else %}{{ member.get_payment_method_display }}{% endif %}</td>
+            <td>{% if member.paid_at %}{{ member.paid_at|date:'d/m/Y' }}{% else %}-{% endif %}</td>
+            <td>{% if member.expired_in %}{{ member.expired_in|date:'d/m/Y' }}{% else %}-{% endif %}</td>
+            <td>
+                <button class="btn btn-success btn-sm" onclick="renovarMembro('{{ member.id }}', '{{ member.payment_method }}')">Renovar</button>
+                <button class="btn btn-danger btn-sm" onclick="cancelarMembro('{{ member.id }}')">Cancelar</button>
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="5" class="text-center">Nenhum membro.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <h2 class="mb-0">Membros Inativos</h2>
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#msgModal" data-group="inativos">Mandar mensagem para todos</button>
+</div>
+<table class="table table-secondary table-hover">
+    <thead>
+        <tr>
+            <th>Apelido</th>
+            <th>ID do Discord</th>
+            <th>Forma de Pagamento</th>
+            <th>Pago em</th>
+            <th>Expira em</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for member in inativos %}
+        <tr>
+            <td>{{ member.nickname }}</td>
+            <td>{{ member.discord_id }}</td>
+            <td>{% if member.payment_method == 'weekly' %}Semanal{% elif member.payment_method == 'monthly' %}Mensal{% else %}{{ member.get_payment_method_display }}{% endif %}</td>
+            <td>{% if member.paid_at %}{{ member.paid_at|date:'d/m/Y' }}{% else %}-{% endif %}</td>
+            <td>{% if member.expired_in %}{{ member.expired_in|date:'d/m/Y' }}{% else %}-{% endif %}</td>
+            <td>
+                <button class="btn btn-success btn-sm" onclick="renovarMembro('{{ member.id }}', '{{ member.payment_method }}')">Renovar</button>
+                <button class="btn btn-danger btn-sm" onclick="cancelarMembro('{{ member.id }}')">Cancelar</button>
+            </td>
+        </tr>
+<script>
+function renovarMembro(memberId, paymentMethod) {
+    fetch('/membros/atualizar_pagamento/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': (document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')||[])[2]
+        },
+        body: 'member_id=' + memberId + '&payment_method=' + paymentMethod
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            alert('Renovado!');
+            location.reload();
+        } else {
+            alert('Erro ao renovar');
+        }
+    });
+}
+function cancelarMembro(memberId) {
+    fetch('/membros/cancelar/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': (document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')||[])[2]
+        },
+        body: 'member_id=' + memberId
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            alert('Cancelado!');
+            location.reload();
+        } else {
+            alert('Erro ao cancelar');
+        }
+    });
+}
+</script>
+        {% empty %}
+        <tr><td colspan="5" class="text-center">Nenhum membro.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+<!-- Modal de Mensagem -->
+<div class="modal fade" id="msgModal" tabindex="-1" aria-labelledby="msgModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="msgModalLabel">Mandar mensagem para o grupo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="msgForm">
+                    <input type="hidden" name="group" id="modalGroup">
+                    <div class="mb-3">
+                        <label for="mensagem" class="form-label">Mensagem</label>
+                        <textarea class="form-control" name="mensagem" id="mensagem" rows="4" required></textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Enviar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Preenche o modal com o grupo correto
+var msgModal = document.getElementById('msgModal');
+msgModal.addEventListener('show.bs.modal', function (event) {
+    var button = event.relatedTarget;
+    var group = button.getAttribute('data-group');
+    document.getElementById('modalGroup').value = group;
+});
+</script>
+{% endblock %}

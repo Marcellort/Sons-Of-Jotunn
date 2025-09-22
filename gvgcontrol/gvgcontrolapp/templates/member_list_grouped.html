@@ -139,42 +139,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 <button class="btn btn-danger btn-sm" onclick="cancelarMembro('{{ member.id }}')">Cancelar</button>
             </td>
         </tr>
-<script>
-function renovarMembro(memberId, paymentMethod) {
-    fetch('/membros/atualizar_pagamento/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': (document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')||[])[2]
-        },
-        body: 'member_id=' + memberId + '&payment_method=' + paymentMethod
-    }).then(r => r.json()).then(data => {
-        if (data.success) {
-            alert('Renovado!');
-            location.reload();
-        } else {
-            alert('Erro ao renovar');
-        }
-    });
-}
-function cancelarMembro(memberId) {
-    fetch('/membros/cancelar/', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            'X-CSRFToken': (document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')||[])[2]
-        },
-        body: 'member_id=' + memberId
-    }).then(r => r.json()).then(data => {
-        if (data.success) {
-            alert('Cancelado!');
-            location.reload();
-        } else {
-            alert('Erro ao cancelar');
-        }
-    });
-}
-</script>
         {% empty %}
         <tr><td colspan="5" class="text-center">Nenhum membro.</td></tr>
         {% endfor %}
@@ -214,5 +178,41 @@ msgModal.addEventListener('show.bs.modal', function (event) {
     var group = button.getAttribute('data-group');
     document.getElementById('modalGroup').value = group;
 });
+
+// Funções JS globais para ações dos botões
+function renovarMembro(memberId, paymentMethod) {
+    fetch('/membros/atualizar_pagamento/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': (document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')||[])[2]
+        },
+        body: 'member_id=' + memberId + '&payment_method=' + paymentMethod
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            alert('Renovado!');
+            location.reload();
+        } else {
+            alert('Erro ao renovar');
+        }
+    });
+}
+function cancelarMembro(memberId) {
+    fetch('/membros/cancelar/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': (document.cookie.match('(^|;) ?csrftoken=([^;]*)(;|$)')||[])[2]
+        },
+        body: 'member_id=' + memberId
+    }).then(r => r.json()).then(data => {
+        if (data.success) {
+            alert('Cancelado!');
+            location.reload();
+        } else {
+            alert('Erro ao cancelar');
+        }
+    });
+}
 </script>
 {% endblock %}

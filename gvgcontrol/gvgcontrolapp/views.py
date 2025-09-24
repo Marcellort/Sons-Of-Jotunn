@@ -89,6 +89,9 @@ class MemberListView(LoginRequiredMixin, ListView):
     template_name = 'member_list.html'
     context_object_name = 'members'
 
+    def get_queryset(self):
+        return Member.objects.filter(status='active')
+
 
 @method_decorator(csrf_exempt, name='dispatch')
 class MemberPaymentUpdateView(LoginRequiredMixin, View):
